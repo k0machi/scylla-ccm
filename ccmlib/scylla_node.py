@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 import logging
 
 import psutil
-import yaml
+from ruamel.yaml import YAML
 import glob
 import re
 import requests
@@ -34,6 +34,9 @@ from ccmlib.node import TimeoutError
 from ccmlib.scylla_repository import setup, get_scylla_version
 from ccmlib.utils.version import parse_version
 
+
+yaml = YAML()
+yaml.default_flow_style = False
 
 class ScyllaNode(Node):
 
@@ -350,18 +353,18 @@ class ScyllaNode(Node):
         data['s3'] = {"endpoint": os.getenv("AWS_S3_ENDPOINT"), "provider": "Minio"}
 
         with open(conf_file, 'w') as f:
-            yaml.safe_dump(data, f, default_flow_style=False)
+            yaml.dump(data, f)
         return conf_file
 
     def update_agent_config(self, new_settings, restart_agent_after_change=True):
         conf_file = os.path.join(self.get_conf_dir(), 'scylla-manager-agent.yaml')
         with open(conf_file, 'r') as f:
-            current_config = yaml.safe_load(f)
+            current_config = yaml.load(f)
 
         current_config.update(new_settings)
 
         with open(conf_file, 'w') as f:
-            yaml.safe_dump(current_config, f, default_flow_style=False)
+            yaml.dump(current_config, f)
 
         if restart_agent_after_change:
             self.restart_scylla_manager_agent(gently=True, recreate_config=False)
@@ -394,7 +397,7 @@ class ScyllaNode(Node):
             pid_file.write(str(self._process_agent.pid))
 
         with open(config_file, 'r') as f:
-            current_config = yaml.safe_load(f)
+            current_config = yaml.load(f)
             # Extracting currently configured port
             current_listening_port = int(current_config['https'].split(":")[1])
 
@@ -542,7 +545,7 @@ class ScyllaNode(Node):
         # from config file scylla#59
         conf_file = os.path.join(self.get_conf_dir(), common.SCYLLA_CONF)
         with open(conf_file, 'r') as f:
-            data = yaml.safe_load(f)
+            data = yaml.load(f)
         jvm_args = jvm_args + ['--api-address', data['api_address']]
         jvm_args = jvm_args + ['--collectd-hostname',
                                f'{socket.gethostname()}.{self.name}']
@@ -1094,7 +1097,7 @@ class ScyllaNode(Node):
         # TODO: copied from node.py
         conf_file = os.path.join(self.get_conf_dir(), common.SCYLLA_CONF)
         with open(conf_file, 'r') as f:
-            data = yaml.safe_load(f)
+            data = yaml.load(f)
 
         data['cluster_name'] = self.cluster.name
         data['auto_bootstrap'] = self.auto_bootstrap
@@ -1154,7 +1157,7 @@ class ScyllaNode(Node):
         if 'alternator_port' in data or 'alternator_https_port' in data:
             data['alternator_address'] = data['listen_address']
         with open(conf_file, 'w') as f:
-            yaml.safe_dump(data, f, default_flow_style=False)
+            yaml.dump(data, f)
 
         # TODO: - for now create a cassandra conf file leaving only
         # cassandra config items - this should be removed once tools are
@@ -1271,7 +1274,7 @@ class ScyllaNode(Node):
                 cassandra_data[key] = data[key]
 
         with open(cassandra_conf_file, 'w') as f:
-            yaml.safe_dump(cassandra_data, f, default_flow_style=False)
+            yaml.dump(cassandra_data, f)
 
     def __update_yaml_dse(self):
         raise NotImplementedError('ScyllaNode.__update_yaml_dse')
